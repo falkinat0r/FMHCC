@@ -1,0 +1,143 @@
+/* HCC R0-Shell-Styles (Foundation). Agent 2 darf/erwartet hier
+   auszubauen; Grundgeruest ist bewusst minimal. */
+
+:root {
+  color-scheme: dark;
+  --bg: #101418;
+  --panel: #1a2027;
+  --text: #e6ebf0;
+  --muted: #93a1b0;
+  --accent: #35b5a2;
+  --error: #e5636c;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.error {
+  color: var(--error);
+}
+
+.center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.login-form {
+  width: min(24rem, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-form h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+input {
+  padding: 0.55rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid #2c3641;
+  background: #0d1116;
+  color: var(--text);
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: rgba(53, 181, 162, 0.12);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  background: var(--panel);
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.topbar-user {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.25rem;
+  padding: 1.25rem;
+  align-content: start;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.list li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #232c36;
+}
+
+.pageinfo {
+  margin-bottom: 0;
+}

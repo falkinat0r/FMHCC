@@ -1,0 +1,58 @@
+# HCC API — systemd-Unit (R0 Foundation, eingefrorenes Deployment-Vertrag)
+#
+# Installation (durch scripts/deploy-lxc.sh, idempotent):
+#   cp deploy/systemd/hcc-api.service /etc/systemd/system/hcc-api.service
+#   systemctl daemon-reload && systemctl enable hcc-api.service
+#
+# Vertrag (docs/DEPLOYMENT_PLAYBOOK.md Abschnitt 6):
+# - unprivilegierte Serviceidentitaet hcc:hcc
+# - WorkingDirectory /opt/hcc/current/backend (Symlink auf aktive Release)
+# - EnvironmentFile /etc/hcc/hcc.env (0640 root:hcc, keine Secrets im Repo)
+# - /etc/hcc/secrets.env optional (0640, nur Service-Gruppe) — Adapter-Secrets
+# - bindet nur 127.0.0.1:8000 (Loopback-Zwang; nginx leitet /api/ weiter)
+# - Migration laeuft vor dem Start (ExecStartPre, alembic upgrade head)
+
+[Unit]
+Description=HCC API (FastAPI) — Homelab Control Center Backend
+After=network.target postgresql.service
+Wants=network.target
+
+[Service]
+Type=exec
+User=hcc
+Group=hcc
+WorkingDirectory=/opt/hcc/current/backend
+EnvironmentFile=/etc/hcc/hcc.env
+EnvironmentFile=-/etc/hcc/secrets.env
+
+# Vor dem Start: Datenbank-Schema auf head bringen (idempotent).
+ExecStartPre=/opt/hcc/current/backend/.venv/bin/alembic upgrade head
+ExecStart=/opt/hcc/current/backend/.venv/bin/uvicorn app.main:create_app \
+  --factory --host 127.0.0.1 --port 8000 --log-level info
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+# --- Hardening (ohne Funktionsbruch) -----------------------------------------
+# Keine Netzwerk-Isolation: PostgreSQL laeuft im lokalen Socket/Loopback.
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RemoveIPC=yes
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

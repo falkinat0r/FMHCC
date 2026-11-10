@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+backend/.venv/
+venv/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+.vite/
+
+# Environment / Secrets (never commit)
+.env
+.env.local
+.env.*.local
+*.secret
+secrets.env
+
+# Local tools / build artifacts
+tools/
+*.log
+.DS_Store
+Thumbs.db
+
+# Lokale Entwicklung/Datenbanken (nie committen)
+*.sqlite3
+*.sqlite
+*.tsbuildinfo
