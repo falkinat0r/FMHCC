@@ -11,7 +11,8 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.hashing import hash_password
+from app.audit.log import record_audit
+from app.auth.hashing import hash_password, verify_password
 from app.errors import ErrorCode, http_error
 from app.models.users import Role, User
 
@@ -83,6 +84,51 @@ def update_user(db: Session, user: User, *, role: Role | None = None, is_active:
 
 def count_active_admins(db: Session) -> int:
     return db.scalar(select(func.count()).select_from(User).where(User.role == Role.ADMIN, User.is_active.is_(True))) or 0
+
+
+def change_password(
+    db: Session,
+    user: User,
+    *,
+    current_password: str,
+    new_password: str,
+) -> None:
+    """Aendert das Passwort eines Users (serverseitig, R1).
+
+    Regeln:
+    - Aktuelles Passwort muss verifiziert werden (konstanter Zeitabgleich
+      ueber Argon2id; fehlgeschlagene Pruefung => 401).
+    - Neues Passwort nach denselben Regeln wie bei der Erzeugung (10-200).
+    - ``must_change_password`` wird zurueckgesetzt.
+    - ALLE bestehenden Sessions des Users werden widerrufen (alle
+      bisher ausgegebenen Cookies verlieren ihre Gueltigkeit sofort).
+    - Wird auditiert (ohne Passwortwerte).
+    """
+    if not verify_password(user.password_hash, current_password):
+        raise http_error(401, ErrorCode.UNAUTHENTICATED, "Aktuelles Passwort ist falsch")
+    validate_password(new_password)
+    if current_password == new_password:
+        raise http_error(422, ErrorCode.VALIDATION_ERROR, "Neues Passwort muss sich vom aktuellen unterscheiden")
+
+    user.password_hash = hash_password(new_password)
+    user.must_change_password = False
+
+    from app.auth.sessions import SessionService
+    from app.config import Settings
+
+    # Session-Verwaltung ohne Cookie-Einstellungen => neutrale Settings.
+    service = SessionService(Settings(database_url="sqlite://"))
+    revoked = service.revoke_all_for_user(db, user.id)
+
+    record_audit(
+        db,
+        user=user,
+        action="auth.password_changed",
+        resource_type="user",
+        resource_id=user.username,
+        details={"sessions_revoked": revoked},
+    )
+    db.flush()
 
 
 def list_users(db: Session, *, page: int, page_size: int) -> tuple[list[User], int]:

@@ -28,8 +28,14 @@ def record_audit(
     resource_type: str | None = None,
     resource_id: str | None = None,
     details: dict | None = None,
+    commit: bool = False,
 ) -> AuditEvent:
-    """Legt ein Audit-Event an (Commit erfolgt durch die Request-Session)."""
+    """Legt ein Audit-Event an (Commit erfolgt durch die Request-Session).
+
+    ``commit=True`` fuer Fehler-Pfade, die danach eine Exception werfen:
+    Die Request-Session rollt bei Fehlern zurueck und wuerde das Event
+    sonst verworfen (z. B. fehlgeschlagener Login/Bootstrap).
+    """
     ip = None
     user_agent = None
     if request is not None:
@@ -49,4 +55,6 @@ def record_audit(
     )
     db.add(event)
     db.flush()
+    if commit:
+        db.commit()
     return event

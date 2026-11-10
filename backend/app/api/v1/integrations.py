@@ -29,6 +29,7 @@ from app.contracts.pagination import Paged, paginate
 from app.db.session import get_db
 from app.errors import ErrorCode, http_error
 from app.integrations import registry
+from app.models.action_jobs import ActionJob
 from app.models.integrations import Integration, IntegrationStatus
 from app.models.users import User
 
@@ -136,6 +137,7 @@ async def verify_integration(
         raise http_error(404, ErrorCode.NOT_FOUND, "Integration nicht gefunden")
 
     checked_at = datetime.now(UTC)
+    integration.last_verified_at = checked_at
     adapter_cls = registry.get_adapter(integration.adapter)
     if adapter_cls is None:
         integration.status = IntegrationStatus.NOT_CONFIGURED
@@ -221,6 +223,16 @@ def delete_integration(
     integration = _get_by_slug(db, integration_id)
     if integration is None:
         raise http_error(404, ErrorCode.NOT_FOUND, "Integration nicht gefunden")
+    # Action-Jobs referenzieren die Integration (FK RESTRICT, bewusst:
+    # Aktionshistorie bleibt referenzintakt). Loeschen wuerde sonst einen
+    # rohen IntegrityError/500 ausloesen — saubere 409-Antwort statt.
+    job_count = db.scalar(select(func.count()).select_from(ActionJob).where(ActionJob.integration_id == integration.id))
+    if job_count:
+        raise http_error(
+            409,
+            ErrorCode.CONFLICT,
+            f"Integration hat {job_count} Action-Jobs; Loeschen ist erst moeglich, wenn die Historie entfernt wird",
+        )
     db.delete(integration)
     record_audit(
         db,

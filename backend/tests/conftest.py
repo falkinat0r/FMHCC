@@ -85,7 +85,11 @@ def db(session_factory):
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter():
+    # Alle modularen Rate-Limiter zuruecksetzen, damit Limits nicht
+    # zwischen Tests leaken (R1: zusatzlich Bootstrap-Limiter).
     auth_routes._login_limiter.reset()
+    if hasattr(auth_routes, "_bootstrap_limiter"):
+        auth_routes._bootstrap_limiter.reset()
     yield
 
 
