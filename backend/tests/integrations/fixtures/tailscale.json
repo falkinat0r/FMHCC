@@ -1,0 +1,71 @@
+{
+  "devices": {
+    "devices": [
+      {
+        "id": "101",
+        "name": ["office-mac"],
+        "hostname": "office-mac",
+        "addresses": ["100.64.0.10"],
+        "online": true,
+        "lastSeen": "2026-11-09T10:00:00Z"
+      },
+      {
+        "id": "102",
+        "name": ["nas"],
+        "hostname": "nas",
+        "addresses": ["100.64.0.20"],
+        "online": false,
+        "lastSeen": "2026-11-01T08:30:00Z"
+      },
+      {
+        "id": "103",
+        "name": ["phone"],
+        "hostname": null,
+        "addresses": ["100.64.0.30"],
+        "online": true,
+        "lastSeen": null
+      }
+    ]
+  },
+  "device_101": {
+    "id": "101",
+    "name": ["office-mac"],
+    "hostname": "office-mac",
+    "addresses": ["100.64.0.10"],
+    "online": true,
+    "lastSeen": "2026-11-09T10:00:00Z"
+  },
+  "local_status": {
+    "BackendState": "Running",
+    "User": "fixture@ts.net",
+    "TailscaleVersion": "1.78.3",
+    "Self": {
+      "ID": 101,
+      "HostName": "hcc-host",
+      "DNSName": "hcc-host.lan.ts.net",
+      "TailscaleIPs": ["100.64.0.5"],
+      "Online": true,
+      "InNetworkMap": true
+    },
+    "Peers": {
+      "100.64.0.10": {
+        "ID": 102,
+        "HostName": "office-mac",
+        "DNSName": "office-mac.lan.ts.net",
+        "TailscaleIPs": ["100.64.0.10"],
+        "Online": true,
+        "RxBytes": 123456789,
+        "TxBytes": 987654321
+      },
+      "100.64.0.20": {
+        "ID": 103,
+        "HostName": "nas",
+        "DNSName": "nas.lan.ts.net",
+        "TailscaleIPs": ["100.64.0.20"],
+        "Online": false,
+        "RxBytes": 10,
+        "TxBytes": 20
+      }
+    }
+  }
+}

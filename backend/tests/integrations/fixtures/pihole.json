@@ -1,0 +1,30 @@
+{
+  "v6_login_info": {"https_port": 443, "dns": true},
+  "v6_auth_noauth": {"valid": true, "sid": null},
+  "v6_auth_login": {"session": {"sid": "fixture-sid-0001"}, "success": true},
+  "v6_blocking_enabled": {"blocking": "enabled", "timer": null, "took": 0.001},
+  "v6_blocking_failed": {"blocking": "failed", "timer": null, "took": 0.001},
+  "v6_summary": {
+    "queries": {"total": 123456, "blocked": 678, "percent_blocked": 0.55, "status": {}},
+    "gravity": {"domains_being_blocked": 45210},
+    "took": 0.002
+  },
+  "v5_versions": {
+    "core_current": "5.19",
+    "web_current": "5.21",
+    "FTL_current": "5.21.2",
+    "core_available": "5.19",
+    "web_available": "5.21",
+    "FTL_available": "5.21.2"
+  },
+  "v5_summary": {
+    "status": "enabled",
+    "dns_queries_today": 98765,
+    "ads_blocked_today": 234,
+    "ads_percentage_today": 0.24,
+    "domains_being_blocked": 51234,
+    "FTLnotrunning": false
+  },
+  "v5_ftl_down": {"FTLnotrunning": true},
+  "v5_auth_required": {"auth": false}
+}

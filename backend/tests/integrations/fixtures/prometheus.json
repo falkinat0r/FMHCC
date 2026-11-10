@@ -1,0 +1,70 @@
+{
+  "buildinfo": {
+    "status": "success",
+    "data": {"version": "2.53.0", "revision": "fixture-revision", "goVersion": "go1.22.0"}
+  },
+  "instances": {
+    "status": "success",
+    "data": ["host1.lan:9100", "host2.lan:9100"]
+  },
+  "up": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {"metric": {"instance": "host1.lan:9100", "job": "node"}, "value": ["1762689600.000000000", "1"]},
+        {"metric": {"instance": "host2.lan:9100", "job": "node"}, "value": ["1762689600.000000000", "0"]}
+      ]
+    }
+  },
+  "memory_available": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {"metric": {"instance": "host1.lan:9100"}, "value": ["1762689600.000000000", "8589934592"]},
+        {"metric": {"instance": "host1.lan:9100"}, "value": ["1762689600.000000000", "garbage"]},
+        {"metric": {"instance": "other.lan:9100"}, "value": ["1762689600.000000000", "100"]}
+      ]
+    }
+  },
+  "empty_query": {
+    "status": "success",
+    "data": {"resultType": "vector", "result": []}
+  },
+  "cpu_instant": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {"metric": {"instance": "host1.lan:9100"}, "value": ["1762689600.000000000", "12.5"]},
+        {"metric": {"instance": "host2.lan:9100"}, "value": ["1762689600.000000000", "42.0"]}
+      ]
+    }
+  },
+  "cpu_range": {
+    "status": "success",
+    "data": {
+      "resultType": "matrix",
+      "result": [
+        {
+          "metric": {"instance": "host1.lan:9100"},
+          "values": [
+            ["1762686000.000000000", "12.5"],
+            ["1762686060.000000000", "13.1"],
+            ["1762686061.000000000", "NaN"]
+          ]
+        },
+        {
+          "metric": {"instance": "host2.lan:9100"},
+          "values": [["1762686000.000000000", "42.0"]]
+        }
+      ]
+    }
+  },
+  "error": {
+    "status": "error",
+    "errorType": "syntax error",
+    "error": "unexpected token \"]\""
+  }
+}
