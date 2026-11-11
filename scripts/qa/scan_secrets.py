@@ -46,6 +46,17 @@ ALLOWLIST = {
     "top-secret-value-0123456789abcdef",  # nur als Suchmuster in Tests
     "sehr-geheimes-passwort-123",
     "abc123",
+    # --- R1-Integration (2026-11-11, integrated Tree): dokumentierte
+    # Falsch-Positiv-Freigaben (Integration-Report, Abschnitt "Secret-Scan").
+    # Keine der Werte ist ein echtes Secret:
+    "deactivate-pass-123",  # tests/auth/test_auth_hardening.py — Test-User 'deactivate-me' (feature/auth)
+    "alt-passwort-123",  # tests/auth/test_password_change.py — Test-Literal (feature/auth)
+    "0123456789abcdef01234789abcdef012345",  # PVEAPIToken-Testfixtur: tests/proxmox/conftest.py, test_config.py, fixtures/server.py — deterministische Parse-Tests gegen lokalen Mock-Server
+    "ffffffffffffffffffffffffffffffff",  # Fake-Secret fuer Leakage-/Parse-Tests: tests/proxmox/test_client.py, test_adapter.py
+    "00000000000000000000000000000000",  # 'bewusst falscher Token' fuer Negativ-Test: tests/proxmox/test_discovery.py
+    "ProxmoxToken",  # Typ-Annotation app/integrations/proxmox/client.py — kein Literal
+    "_split_token",  # Tuple-Unpacking app/integrations/proxmox/config.py — kein Literal
+    "user:pass@",  # Docstring-Beispiel app/integrations/monitoring/httputil.py — keine echte URL
 }
 
 RULES: list[tuple[str, str, re.Pattern[str]]] = [
