@@ -24,7 +24,22 @@ describe("ApiClient (R0-Shell)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("setzt X-CSRF-Token bei POST (Double-Submit)", async () => {
+  it("setzt X-CSRF-Token und Content-Type bei POST mit Body (Double-Submit)", async () => {
+    document.cookie = "hcc_csrf=testtoken; path=/";
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new ApiClient("/api/v1");
+    await client.post("/auth/login", { username: "u", password: "p" });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/v1/auth/login");
+    expect(new Headers(init.headers).get("x-csrf-token")).toBe("testtoken");
+    expect(init.credentials).toBe("include");
+    expect(new Headers(init.headers).get("content-type")).toBe("application/json");
+  });
+
+  it("setzt X-CSRF-Token auch bei POST ohne Body; Content-Type nur mit Body", async () => {
     document.cookie = "hcc_csrf=testtoken; path=/";
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, { ok: true }));
     vi.stubGlobal("fetch", fetchMock);
@@ -32,10 +47,12 @@ describe("ApiClient (R0-Shell)", () => {
     const client = new ApiClient("/api/v1");
     await client.post("/auth/logout");
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/v1/auth/logout");
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(new Headers(init.headers).get("x-csrf-token")).toBe("testtoken");
     expect(init.credentials).toBe("include");
+    // Client-Semantik: ohne Body wird kein Content-Type gesetzt
+    // (Backend-FastAPI akzeptiert Body-lose POST ohne Content-Type).
+    expect(new Headers(init.headers).get("content-type")).toBeNull();
   });
 
   it("setzt Content-Type: application/json bei Body (PUT mit Payload)", async () => {

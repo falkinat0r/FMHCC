@@ -1,0 +1,74 @@
+# HCC QA-Pipeline (R1, Agent 5)
+#
+# Laeuft auf jeden Push/PR gegen main und manuell. Führt die komplette
+# QA-Pipeline (scripts/qa/run-qa.sh) aus: Secret-Scan, Lint, Tests,
+# OpenAPI-Drift, Frontend-Gates, Dependency-Audits, Deploy-Invarianten.
+#
+# Exit-Semantik der Pipeline: 0 = grün, 1 = Failure, 2 = nur BLOCKED
+# (z. B. Netzwerk beim Audit). In CI wird auch Exit 2 als Failure
+# behandelt: ein Audit, der im CI nicht erreichbar ist, muss sichtbar
+# werden — ein stiller Green-Pass ist verboten (R1-Regel).
+name: qa
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: QA-Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Prepare backend venv
+        run: uv sync --frozen
+        working-directory: backend
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend deps
+        # Hinweis: package-lock.json ist in R1 nicht committet (Findung in
+        # docs/quality/R1-baseline-review.md) — npm install statt npm ci.
+        # Sobald das Lockfile committet ist, auf `npm ci` umstellen.
+        run: npm install --no-audit --no-fund
+        working-directory: frontend
+
+      - name: Run QA pipeline
+        run: |
+          set -o pipefail
+          bash scripts/qa/run-qa.sh 2>&1 | tee qa-pipeline.log
+          rc=${PIPESTATUS[0]}
+          echo "QA-Exit-Code: $rc"
+          if [ "$rc" -eq 2 ]; then
+            echo "::error::QA-Pipeline: Gates BLOCKED (z. B. Audit ohne Netzwerk) — in CI kein Green-Pass."
+          fi
+          exit "$rc"
+
+      - name: Upload pipeline log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pipeline-log
+          path: qa-pipeline.log
+          if-no-files-found: ignore

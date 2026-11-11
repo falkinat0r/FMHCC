@@ -3,11 +3,15 @@
 # HCC Deployment-Script fuer den unprivilegierten Debian-LXC (R0 Foundation).
 #
 # Aufruf (als root IM LXC):
-#   sudo scripts/deploy-lxc.sh /pfad/zu/hcc-checkout
-#   sudo scripts/deploy-lxc.sh /pfad/zu/hcc-checkout --start
+#   sudo scripts/deploy-lxc.sh /pfad/zu/hcc-checkout            (Deployment)
+#   sudo scripts/deploy-lxc.sh /pfad/zu/hcc-checkout --start    (Deployment + Start)
+#   sudo scripts/deploy-lxc.sh --list                           (Release-Liste)
+#   sudo scripts/deploy-lxc.sh --rollback <commit-sha>          (Rollback)
 #
 # Eigenschaften:
 # - idempotent: jede Stufe wird nur ausgefuehrt, wenn noetig
+# - preflight: notwendige Artefakte (.env.example, Deploy-Dateien) werden
+#   vor der ersten Systemaenderung geprueft (R1-Deploy-Review)
 # - keine Secrets im Repository; /etc/hcc/hcc.env wird lokal erzeugt (0640)
 # - keine produktiven Aenderungen OUTSIDE dieses LXC
 # - Frontend-Build nur, wenn Node.js vorliegt (sonst klare Warnung)
@@ -20,12 +24,83 @@
 
 set -euo pipefail
 
+log() { printf '\n==> %s\n' "$*"; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# ---------------------------------------------------------------------------
+# Subbefehle: --list, --rollback  (vor dem eigentlichen Deployment)
+# ---------------------------------------------------------------------------
+list_releases() {
+    local current
+    current="$(readlink /opt/hcc/current 2>/dev/null || true)"
+    [ -n "${current:-}" ] || current="(nicht gesetzt)"
+    echo "Verfuegbare Releases unter /opt/hcc/releases:"
+    if [ -d /opt/hcc/releases ]; then
+        local d marker
+        for d in /opt/hcc/releases/*/; do
+            [ -d "$d" ] || continue
+            d="${d%/}"
+            marker=" "
+            [ "$d" = "$current" ] && marker="*"
+            printf '  %s %s\n' "$marker" "$(basename "$d")"
+        done
+    else
+        echo "  (keine)"
+    fi
+    echo "Aktiv (*): $current"
+}
+
+do_rollback() {
+    local sha="${1:-}"
+    if [ -z "$sha" ]; then
+        echo "Usage: $0 --rollback <commit-sha>   (--list zeigt verfuegbare)" >&2
+        exit 1
+    fi
+    local target="/opt/hcc/releases/${sha}"
+    if [ ! -d "$target" ]; then
+        echo "ERROR: Release '$sha' existiert nicht unter /opt/hcc/releases." >&2
+        echo "Verfuegbare:" >&2
+        list_releases >&2
+        exit 1
+    fi
+    local link_tmp="/opt/hcc/current.tmp.$$"
+    ln -sfn "$target" "$link_tmp"
+    if [ -e /opt/hcc/current ] || [ -L /opt/hcc/current ]; then
+        rm /opt/hcc/current
+    fi
+    mv "$link_tmp" /opt/hcc/current
+    echo "Rollback: /opt/hcc/current -> $target"
+    systemctl restart hcc-api.service
+    sleep 2
+    if [ -x /usr/local/lib/hcc/health-probe.sh ]; then
+        /usr/local/lib/hcc/health-probe.sh \
+            || echo "WARNUNG: Health-Probe nach Rollback schlaegig." >&2
+    else
+        echo "WARNUNG: health-probe.sh fehlt; nur Systemzustand gecheckt." >&2
+        systemctl --no-pager status hcc-api.service --lines=15 || true
+    fi
+    echo "Rollback abgeschlossen."
+}
+
+if [ "${1:-}" = "--list" ]; then
+    list_releases
+    exit 0
+fi
+if [ "${1:-}" = "--rollback" ]; then
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "ERROR: --rollback muss als root im LXC ausgefuehrt werden." >&2
+        exit 1
+    fi
+    do_rollback "${2:-}"
+    exit 0
+fi
+
 SRC="${1:-}"
 START_ON_FINISH=0
 if [ "$#" -ge 2 ] && [ "$2" = "--start" ]; then START_ON_FINISH=1; fi
 
 if [ -z "$SRC" ] || [ ! -d "$SRC" ]; then
-    echo "Usage: sudo $0 <repo-checkout-dir> [--start]" >&2
+    echo "Usage: sudo $0 <repo-checkout-dir> [--start] | --list | --rollback <sha>" >&2
     exit 1
 fi
 SRC="$(cd "$SRC" && pwd)"
@@ -39,8 +114,34 @@ if [ ! -f /etc/debian_version ]; then
     exit 1
 fi
 
-log() { printf '\n==> %s\n' "$*"; }
-have() { command -v "$1" >/dev/null 2>&1; }
+# ---------------------------------------------------------------------------
+# Preflight (R1): keine Systemaenderung, bevor alles Noetige vorliegt.
+# ---------------------------------------------------------------------------
+log "Preflight: noetige Artefakte"
+MISSING=0
+for f in .env.example \
+         deploy/systemd/hcc-api.service \
+         deploy/systemd/health-probe.sh \
+         deploy/nginx/hcc.conf \
+         backend/pyproject.toml backend/uv.lock frontend/package.json; do
+    if [ ! -f "$SRC/$f" ]; then
+        echo "ERROR: fehlt im Checkout: $f" >&2
+        MISSING=1
+    fi
+done
+if [ "$MISSING" -ne 0 ]; then
+    echo "Abbruch: Checkout ist unvollstaendig (s. o.)." >&2
+    exit 1
+fi
+if ! git -C "$SRC" rev-parse --verify HEAD >/dev/null 2>&1; then
+    echo "ERROR: $SRC ist kein Git-Checkout." >&2
+    exit 1
+fi
+if [ -n "$(git -C "$SRC" status --porcelain)" ]; then
+    echo "WARNUNG: Checkout hat uncommittete Aenderungen; deployt wird der" >&2
+    echo "         kommittierte Stand (git archive HEAD), nicht der Worktree." >&2
+fi
+echo "Preflight OK."
 
 # ---------------------------------------------------------------------------
 log "Stufe 1/7: Basis-Pakete (idempotent)"
@@ -166,6 +267,10 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Stufe 7/7: Systemdienst + nginx"
+# Health-Probe (ExecStartPost) an stabilem Ort, Release-uebergriffend.
+install -d /usr/local/lib/hcc
+install -m 755 "$SRC/deploy/systemd/health-probe.sh" /usr/local/lib/hcc/health-probe.sh
+
 install -m 644 "$SRC/deploy/systemd/hcc-api.service" /etc/systemd/system/hcc-api.service
 systemctl daemon-reload
 systemctl enable hcc-api.service

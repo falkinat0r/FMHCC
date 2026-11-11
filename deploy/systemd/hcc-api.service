@@ -11,6 +11,8 @@
 # - /etc/hcc/secrets.env optional (0640, nur Service-Gruppe) — Adapter-Secrets
 # - bindet nur 127.0.0.1:8000 (Loopback-Zwang; nginx leitet /api/ weiter)
 # - Migration laeuft vor dem Start (ExecStartPre, alembic upgrade head)
+# - Health-Probe nach dem Start (ExecStartPost, R1-Deploy-Review): der
+#   Start zaehlt erst als gelungen, wenn /api/v1/health/live 200 liefert.
 
 [Unit]
 Description=HCC API (FastAPI) — Homelab Control Center Backend
@@ -29,7 +31,12 @@ EnvironmentFile=-/etc/hcc/secrets.env
 ExecStartPre=/opt/hcc/current/backend/.venv/bin/alembic upgrade head
 ExecStart=/opt/hcc/current/backend/.venv/bin/uvicorn app.main:create_app \
   --factory --host 127.0.0.1 --port 8000 --log-level info
+# Health-Probe: wartet bis zu 30 s auf HTTP 200 von /api/v1/health/live
+# (installiert von deploy-lxc.sh nach /usr/local/lib/hcc/health-probe.sh).
+ExecStartPost=/usr/local/lib/hcc/health-probe.sh
 
+# Alembic-Migration + Probe brauchen Spielraum (neue DB / viele Migrations).
+TimeoutStartSec=180
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30

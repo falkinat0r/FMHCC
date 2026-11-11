@@ -4,7 +4,8 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-// R1: Flat Config (ESLint 9) mit TypeScript-Parser.
+// R1: Flat Config (ESLint 9) mit TypeScript-Parser (typescript-eslint, R1/QA-
+// Befund: ohne TS-Parser war der Lint-Gate fuer .ts/.tsx nicht verlaesslich).
 // src/api/generated ist generiert (openapi-typescript) und wird nicht gelintet.
 export default [
   { ignores: ["dist", "node_modules", "src/api/generated"] },
@@ -29,7 +30,7 @@ export default [
   },
   {
     // Tests duerfen Vitest-Globalen nutzen (globals: true in vite.config)
-    files: ["**/*.test.{ts,tsx}"],
+    files: ["**/*.test.{ts,tsx}", "vitest.setup.ts"],
     languageOptions: {
       globals: {
         ...globals.jest,
