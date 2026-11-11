@@ -1,0 +1,19 @@
+{
+  "grafana_health_ok": {"database": "ok", "version": "11.4.0", "commit": "fixture-commit"},
+  "grafana_health_db_error": {"database": "error", "version": "11.4.0"},
+  "grafana_datasources": [
+    {"id": 1, "name": "Prometheus (Fixture)", "type": "prometheus"},
+    {"id": 2, "name": "Loki (Fixture)", "type": "loki"},
+    {"id": 3, "name": "No-Id (Fixture)"}
+  ],
+  "loki_labels": ["app", "container", "filename", "job"],
+  "uptime_status_up": {"status": "UP"},
+  "uptime_status_down": {"status": "DOWN"},
+  "uptime_login_ok": {"success": true, "message": "login success"},
+  "uptime_login_error": {"success": false, "message": "invalid credentials"},
+  "uptime_monitors": [
+    {"id": 11, "name": "Web (Fixture)", "host": "web1.lan", "port": 443, "type": "http", "status": "up"},
+    {"id": 12, "name": "Mail (Fixture)", "host": "mail1.lan", "port": 25, "type": "port", "status": "down"},
+    {"id": 13, "name": "Paused (Fixture)", "host": "x.lan", "port": 80, "type": "http", "status": "paused"}
+  ]
+}

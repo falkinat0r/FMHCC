@@ -1,0 +1,18 @@
+{
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {"alertname": "HostDown", "instance": "host2.lan:9100", "severity": "critical", "fingerprint": "fp-1"},
+      "annotations": {"summary": "Host offline (Fixture)"},
+      "startsAt": "2026-11-09T09:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z"
+    },
+    {
+      "status": "firing",
+      "labels": {"alertname": "HighCpu", "severity": "warning", "fingerprint": "fp-2"},
+      "annotations": {},
+      "startsAt": "2026-11-09T10:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z"
+    }
+  ]
+}

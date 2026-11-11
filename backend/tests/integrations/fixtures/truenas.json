@@ -1,0 +1,152 @@
+{
+  "openapi": {
+    "openapi": "3.0.0",
+    "info": {"title": "TrueNAS RESTful API (Fixture)", "version": "v2.0"}
+  },
+  "system_info": {
+    "version": "TrueNAS-24.04.2",
+    "buildtime": "2025-03-01",
+    "hostname": "fixture-nas",
+    "physmem": 34359738368,
+    "model": "FixtureBoard",
+    "cores": 8,
+    "physical_cores": 4,
+    "loadavg": [0.42, 0.51, 0.55],
+    "uptime": "30 days",
+    "uptime_seconds": 2592000,
+    "timezone": "Europe/Berlin",
+    "boottime": "2025-10-01T00:00:00"
+  },
+  "pools": [
+    {
+      "id": 1,
+      "name": "tank",
+      "guid": "1a2b3c4d-5e6f",
+      "status": "ONLINE",
+      "healthy": true,
+      "warning": false,
+      "size": 8000000000000,
+      "allocated": 4000000000000,
+      "free": 4000000000000,
+      "status_code": 0,
+      "status_detail": null,
+      "scan": {"state": null, "percentage": 0, "errors": null}
+    },
+    {
+      "id": 2,
+      "name": "backup",
+      "guid": "7e8f9a0b-1c2d",
+      "status": "DEGRADED",
+      "healthy": false,
+      "warning": true,
+      "size": 6000000000000,
+      "allocated": 5500000000000,
+      "free": 500000000000,
+      "status_code": 1,
+      "status_detail": "One or more devices has experienced an error",
+      "scan": {"state": "SCRUB", "percentage": 42.5, "errors": 3}
+    },
+    {
+      "id": 3,
+      "name": "old-media",
+      "guid": "9f0a1b2c-3d4e",
+      "status": "FAULTED",
+      "healthy": false,
+      "warning": true,
+      "size": null,
+      "allocated": null,
+      "free": null,
+      "status_code": 6,
+      "status_detail": "Too few devices",
+      "scan": null
+    }
+  ],
+  "disks": [
+    {
+      "identifier": "ata-FixtureDisk0",
+      "name": "da0",
+      "model": "FixtureDisk 4TB",
+      "serial": "SN000001",
+      "size": 4000000000000,
+      "type": "HDD",
+      "pool": "tank"
+    },
+    {
+      "identifier": "ata-FixtureDisk1",
+      "name": "da1",
+      "model": "FixtureDisk 4TB",
+      "serial": "SN000002",
+      "size": 4000000000000,
+      "type": "HDD",
+      "pool": "backup"
+    },
+    {
+      "identifier": "ata-FixtureDisk2",
+      "name": "da2",
+      "model": "FixtureDisk 2TB",
+      "serial": "SN000003",
+      "size": 2000000000000,
+      "type": "HDD",
+      "pool": null
+    }
+  ],
+  "datasets": [
+    {
+      "id": "tank",
+      "type": "FILESYSTEM",
+      "name": "tank",
+      "pool": "tank",
+      "mountpoint": "/tank",
+      "encrypted": false,
+      "used": {"parsed": 4.0, "rawvalue": "4T", "value": 4000000000000},
+      "available": {"parsed": 4.0, "rawvalue": "4T", "value": 4000000000000},
+      "quota": {"parsed": null, "rawvalue": "none", "value": "none"}
+    },
+    {
+      "id": "tank/data",
+      "type": "FILESYSTEM",
+      "name": "tank/data",
+      "pool": "tank",
+      "mountpoint": "/tank/data",
+      "encrypted": true,
+      "used": {"parsed": 1.5, "rawvalue": "1.5T", "value": 1500000000000},
+      "available": {"parsed": 4.0, "rawvalue": "4T", "value": 4000000000000},
+      "quota": {"parsed": 2.0, "rawvalue": "2T", "value": 2000000000000}
+    },
+    {
+      "id": "tank/vm-images",
+      "type": "FILESYSTEM",
+      "name": "tank/vm-images",
+      "pool": "tank",
+      "mountpoint": "/tank/vm-images",
+      "encrypted": false,
+      "used": {"parsed": null, "rawvalue": "none", "value": "none"},
+      "available": {"parsed": 1.0, "rawvalue": "1T", "value": 1000000000000},
+      "quota": {"parsed": null, "rawvalue": "none", "value": "none"}
+    }
+  ],
+  "smart_results": [
+    {
+      "disk": "da0",
+      "tests": [
+        {"num": 0, "description": "Short Self-Test", "status": "SUCCESS", "remaining": 0}
+      ],
+      "current_test": null
+    },
+    {
+      "disk": "da1",
+      "tests": [
+        {"num": 0, "description": "Short Self-Test", "status": "SUCCESS", "remaining": 0},
+        {"num": 1, "description": "Extended Self-Test", "status": "FAILED", "remaining": 0, "lba_of_first_error": 123456}
+      ],
+      "current_test": null
+    },
+    {
+      "disk": "da2",
+      "tests": [
+        {"num": 0, "description": "Short Self-Test", "status": "RUNNING", "remaining": 50}
+      ],
+      "current_test": {"progress": 50}
+    }
+  ]
+}

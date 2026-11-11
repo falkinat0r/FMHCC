@@ -1,0 +1,62 @@
+{
+  "version": {
+    "ApiVersion": "1.47",
+    "Version": "27.1.1",
+    "Platform": {"Name": "Docker Engine Community", "OS": "linux"},
+    "Components": ["Engine"]
+  },
+  "info": {
+    "Name": "fixture-docker-host",
+    "ServerVersion": "27.1.1",
+    "OperatingSystem": "Debian GNU/Linux 12 (bookworm)",
+    "Architecture": "aarch64",
+    "Containers": 3,
+    "ContainersRunning": 2,
+    "ContainersStopped": 1,
+    "Images": 7
+  },
+  "containers": [
+    {
+      "Id": "a1b2c3d4e5f607182930",
+      "Names": ["/hcc-backend"],
+      "Image": "ghcr.io/example/hcc-backend:1.0",
+      "ImageID": "sha256:fixture-image",
+      "State": "running",
+      "Status": "Up 2 hours",
+      "StartedAt": "2026-01-01T00:00:00Z",
+      "Labels": {"com.docker.compose.project": "hcc", "com.docker.compose.service": "backend"}
+    },
+    {
+      "Id": "b2c3d4e5f60718293041",
+      "Names": ["/broken-service"],
+      "Image": "nginx:latest",
+      "ImageID": "sha256:fixture-image-2",
+      "State": "exited",
+      "Status": "Exited (1) 3 hours ago",
+      "StartedAt": "2026-01-02T00:00:00Z",
+      "Labels": {}
+    },
+    {
+      "Id": "c3d4e5f6071829304152",
+      "Names": ["/paused"],
+      "Image": "redis:7",
+      "ImageID": "sha256:fixture-image-3",
+      "State": "paused",
+      "Status": "Paused",
+      "StartedAt": "2025-12-31T00:00:00Z",
+      "Labels": {}
+    }
+  ],
+  "images": [
+    {"Id": "sha256:fixtureimage0000000000", "Tags": ["hcc-backend:1.0"], "Size": 123456789},
+    {"Id": "sha256:fixtureimage0000000001", "Tags": ["nginx:latest", "<none>"], "Size": 987654321}
+  ],
+  "stats": {
+    "cpu_stats": {"cpu_usage": {"total_usage": 1125000, "percpu_usage": [562500, 562500]}, "system_cpu_usage": 8000000, "online_cpus": 2},
+    "precpu_stats": {"cpu_usage": {"total_usage": 1000000, "percpu_usage": [500000, 500000]}, "system_cpu_usage": 7000000, "online_cpus": 2},
+    "ncpus": 2,
+    "memory_stats": {"usage": 536870912, "limit": 2147483648},
+    "networks": {"eth0": {"rx_bytes": 1000, "tx_bytes": 2000}},
+    "blkio_device_usage": {"io_service_bytes_recursive": []}
+  }
+}
