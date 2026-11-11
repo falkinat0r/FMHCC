@@ -14,7 +14,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config import Settings
@@ -52,6 +52,10 @@ class SessionService:
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> SessionCreated:
+        # Nebenbei aufgeraeumt: abgelaufene/widerufene Sessions der Tabelle
+        # loesen, damit user_sessions nicht unbeschrankt waechst.
+        self.purge_expired(db)
+
         raw_token = secrets.token_hex(32)
         now = utcnow()
         expires_at = now + timedelta(seconds=self._settings.session_ttl_seconds)
@@ -87,3 +91,31 @@ class SessionService:
         if session is not None and session.revoked_at is None:
             session.revoked_at = utcnow()
             db.flush()
+
+    def revoke_all_for_user(self, db: Session, user_id: uuid.UUID) -> int:
+        """Widerruft ALLE aktiven Sessions eines Users.
+
+        Wird beim Passwortwechsel und bei Deaktivierung aufgerufen, damit
+        bisher ausgegebene Cookies sofort wirkungslos werden.
+        Liefert die Anzahl der widerrufenen Sessions.
+        """
+        result = db.execute(
+            update(UserSession)
+            .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+            .values(revoked_at=utcnow())
+        )
+        db.flush()
+        return result.rowcount or 0
+
+    def purge_expired(self, db: Session) -> int:
+        """Entfernt abgelaufene oder widerrufene Session-Rows (Ruecklauf).
+
+        Liefert die Anzahl der geloeschten Rows. Kann periodisch oder
+        nebenbei (z. B. beim Anlegen neuer Sessions) aufgerufen werden.
+        """
+        now = utcnow()
+        result = db.execute(
+            delete(UserSession).where(or_(UserSession.expires_at < now, UserSession.revoked_at.is_not(None)))
+        )
+        db.flush()
+        return result.rowcount or 0

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.audit.log import record_audit
 from app.auth.bootstrap import create_bootstrap_admin
-from app.auth.hashing import verify_password
+from app.auth.hashing import hash_password, verify_password
 from app.auth.rate_limit import SlidingWindowLimiter
 from app.auth.sessions import SessionService
 from app.config import Settings
@@ -29,13 +29,19 @@ from app.contracts.auth import (
     LogoutResponse,
 )
 from app.db.session import get_db
-from app.errors import ErrorCode, http_error
+from app.errors import ApiError, ErrorCode, http_error
 from app.models.users import User
 
 router = APIRouter(prefix="/auth")
 
 # Login-Rate-Limit: 10 Versuche pro IP / 60 s (R0-Default, frozen)
 _login_limiter = SlidingWindowLimiter(max_calls=10, window_seconds=60)
+# Bootstrap-Rate-Limit: 5 Versuche pro IP / 60 s (R1, oeffentlicher Endpoint)
+_bootstrap_limiter = SlidingWindowLimiter(max_calls=5, window_seconds=60)
+
+# Timing-Ausgleich: unbekannter User => Argon2-Verifizierung gegen ein
+# Dummy-Hash, damit die Antwortzeit nicht verraeet, ob der Username existiert.
+_DUMMY_HASH = hash_password("hcc-timing-equalization-dummy")
 
 
 def _settings(request: Request) -> Settings:
@@ -64,13 +70,30 @@ def bootstrap(
     request: Request,
     db: Session = Depends(get_db),
 ) -> BootstrapResponse:
-    user = create_bootstrap_admin(
-        db,
-        _settings(request),
-        username=payload.username,
-        password=payload.password,
-        token=payload.token,
-    )
+    ip = _client_ip(request) or "unknown"
+    if not _bootstrap_limiter.allow(ip):
+        record_audit(db, user=None, action="auth.bootstrap.rate_limited", request=request, commit=True)
+        raise http_error(429, ErrorCode.RATE_LIMITED, "Zu viele Bootstrap-Versuche, bitte kurz warten")
+
+    try:
+        user = create_bootstrap_admin(
+            db,
+            _settings(request),
+            username=payload.username,
+            password=payload.password,
+            token=payload.token,
+        )
+    except ApiError as exc:
+        # Fehler-Pfad: Request-Session rollt zurueck => audit mit commit persistieren.
+        record_audit(
+            db,
+            user=None,
+            action="auth.bootstrap.failed",
+            request=request,
+            details={"reason": exc.code.value, "status_code": exc.status_code},
+            commit=True,
+        )
+        raise
     record_audit(db, user=user, action="auth.bootstrap.success", request=request)
     return BootstrapResponse(
         username=user.username,
@@ -89,15 +112,21 @@ def login(
     ip = _client_ip(request) or "unknown"
 
     if not _login_limiter.allow(ip):
-        record_audit(db, user=None, action="auth.login.rate_limited", request=request)
+        record_audit(db, user=None, action="auth.login.rate_limited", request=request, commit=True)
         raise http_error(429, ErrorCode.RATE_LIMITED, "Zu viele Anmeldeversuche, bitte kurz warten")
 
     user = db.scalar(select(User).where(User.username == payload.username))
-    if user is None or not verify_password(user.password_hash, payload.password):
-        record_audit(db, user=user, action="auth.login.failed", request=request)
+    if user is None:
+        # Timing-Ausgleich: unbekannter User kostet ebenso Argon2-Zeit
+        # wie ein falsches Passwort (verraet nicht, ob User existiert).
+        verify_password(_DUMMY_HASH, payload.password)
+        record_audit(db, user=None, action="auth.login.failed", request=request, commit=True)
+        raise http_error(401, ErrorCode.UNAUTHENTICATED, "Anmeldedaten ungültig")
+    if not verify_password(user.password_hash, payload.password):
+        record_audit(db, user=user, action="auth.login.failed", request=request, commit=True)
         raise http_error(401, ErrorCode.UNAUTHENTICATED, "Anmeldedaten ungültig")
     if not user.is_active:
-        record_audit(db, user=user, action="auth.login.rejected_inactive", request=request)
+        record_audit(db, user=user, action="auth.login.rejected_inactive", request=request, commit=True)
         raise http_error(403, ErrorCode.FORBIDDEN, "Konto ist deaktiviert")
 
     session = _sessions(request).create(db, user.id, ip_address=ip, user_agent=_user_agent(request))

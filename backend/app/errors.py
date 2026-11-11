@@ -191,9 +191,11 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(ApiError)
     async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
+        headers = {"Retry-After": "60"} if exc.status_code == 429 else None
         return JSONResponse(
             status_code=exc.status_code,
             content=_envelope(request, exc.code, exc.message, exc.details),
+            headers=headers,
         )
 
     @app.exception_handler(Exception)

@@ -13,7 +13,24 @@ from contextvars import ContextVar
 
 request_id_var: ContextVar[str | None] = ContextVar("hcc_request_id", default=None)
 
-_MASKED_FIELDS = frozenset({"password", "token", "secret", "authorization", "cookie", "bootstrap_token"})
+_MASKED_FIELDS = frozenset(
+    {
+        "password",
+        "password_hash",
+        "token",
+        "access_token",
+        "refresh_token",
+        "secret",
+        "api_key",
+        "client_secret",
+        "private_key",
+        "authorization",
+        "cookie",
+        "session_token",
+        "csrf_token",
+        "bootstrap_token",
+    }
+)
 
 
 class JsonLineFormatter(logging.Formatter):
