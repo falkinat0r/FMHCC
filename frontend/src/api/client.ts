@@ -1,15 +1,13 @@
 /**
- * R0 API-Client (Foundation-Shell).
+ * API-Client (einziger Zugriffspunkt auf das Backend).
  *
- * Einziges Zueg zum Backend:
- * - Cookies via credentials: "include" (Session + CSRF-Cookies)
- * - Double-Submit-Header X-CSRF-Token fuer state-aendernde Requests
+ * Semantik (frozen, docs/api-contracts.md):
+ * - Cookies via `credentials: "include"` (Session + CSRF-Cookies)
+ * - Double-Submit-Header `X-CSRF-Token` fuer state-aendernde Requests
  *   (Wert = hcc_csrf-Cookie; GET/HEAD/OPTIONS ausgenommen)
- * - Error-Envelope wird zentral geparst (siehe docs/api-contracts.md)
+ * - Error-Envelope wird zentral geparst
  *
- * Achtung: Die hier handgeschriebenen Schemas sind R0-Shell-Typen.
- * Agent 2 ersetzt sie durch die generierten Typen aus
- * `src/api/generated/schema.ts` (openapi-typescript, Contract-Snapshot).
+ * Typen kommen aus `./types.ts` (generiert aus dem OpenAPI-Snapshot).
  */
 
 export class ApiRequestError extends Error {
@@ -42,66 +40,6 @@ export interface Paged<T> {
   total_pages: number;
 }
 
-/** R0-Shell-Typen (ersetzen durch generated/schema.ts). */
-export type Role = "viewer" | "operator" | "admin";
-
-export interface CurrentUserResponse {
-  id: string;
-  username: string;
-  display_name: string | null;
-  role: Role;
-  is_active: boolean;
-  must_change_password: boolean;
-  created_at: string;
-  last_login_at: string | null;
-}
-
-export interface LoginResponse {
-  message: string;
-  session_expires_at: string;
-}
-
-export interface IntegrationOut {
-  id: string;
-  integration_id: string;
-  name: string;
-  adapter: string;
-  status: string;
-  capabilities: Record<string, unknown>;
-  base_url: string | null;
-  secret_ref: string | null;
-  last_verified_at: string | null;
-  last_error: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ResourceOut {
-  id: string;
-  integration_id: string;
-  resource_type: string;
-  external_id: string;
-  name: string | null;
-  status: string;
-  source: string;
-  payload: Record<string, unknown>;
-  observed_at: string | null;
-  last_seen_at: string | null;
-  first_seen_at: string | null;
-}
-
-export interface AuditEventOut {
-  id: number;
-  username: string | null;
-  action: string;
-  resource_type: string | null;
-  resource_id: string | null;
-  ip_address: string | null;
-  user_agent: string | null;
-  details: Record<string, unknown>;
-  created_at: string;
-}
-
 /** Liest den Double-Submit-Cookie (hcc_csrf, bewusst nicht HttpOnly). */
 export function getCsrfToken(cookieStore: string = document.cookie): string {
   const match = cookieStore.match(/(?:^|;\s*)hcc_csrf=([^;]+)/);
@@ -109,6 +47,19 @@ export function getCsrfToken(cookieStore: string = document.cookie): string {
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/** Baue einen Query-String aus definierten (nicht-null) Paaren. */
+export function buildQuery(
+  params: Record<string, string | number | null | undefined>,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined || value === "") continue;
+    search.set(key, String(value));
+  }
+  const s = search.toString();
+  return s === "" ? "" : `?${s}`;
+}
 
 export class ApiClient {
   constructor(readonly baseUrl: string) {}

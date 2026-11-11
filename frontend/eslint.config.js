@@ -2,11 +2,14 @@ import js from "@eslint/js";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
-// R0-Grundgeruest (Flat Config, ESLint 9). Agent 2 baut aus.
+// R1: Flat Config (ESLint 9) mit TypeScript-Parser.
+// src/api/generated ist generiert (openapi-typescript) und wird nicht gelintet.
 export default [
   { ignores: ["dist", "node_modules", "src/api/generated"] },
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     languageOptions: {
       globals: globals.browser,
@@ -18,14 +21,21 @@ export default [
     rules: {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
     },
   },
   {
-    // Tests duerfen Vitest-Globalen nutzen
+    // Tests duerfen Vitest-Globalen nutzen (globals: true in vite.config)
     files: ["**/*.test.{ts,tsx}"],
     languageOptions: {
-      globals: globals.jest,
+      globals: {
+        ...globals.jest,
+        // Vitest-Global
+        vi: "readonly",
+      },
     },
   },
 ];

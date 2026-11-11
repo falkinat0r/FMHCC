@@ -1,10 +1,11 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // Entwicklung: /api wird an das Backend auf Loopback 8000 proxied.
 // Produktion: nginx uebernimmt die Weiterleitung (deploy/nginx/hcc.conf).
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     host: "127.0.0.1",
     port: 5173,
