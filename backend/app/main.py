@@ -33,6 +33,7 @@ from app.auth.csrf import CsrfMiddleware
 from app.config import Environment, Settings, get_settings
 from app.db.session import build_session_factory
 from app.errors import ErrorEnvelope, UnhandledErrorMiddleware, register_exception_handlers
+from app.integrations.bootstrap import register_all_adapters
 from app.logging_setup import configure_logging, request_id_var
 
 
@@ -86,6 +87,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.engine = engine
     app.state.session_factory = build_session_factory(engine)
+
+    # R1-Integration: alle in diesem Build enthaltenen Adapter in die
+    # Adapter-Registry eintragen (idempotent, nicht-abstuerzend), damit
+    # der Verify-Endpunkt real antwortet statt not_implemented.
+    # Vorschlag: docs/proposals/agent3-proxmox-core-integration.md (Item 1).
+    register_all_adapters()
 
     register_exception_handlers(app)
     app.include_router(api_v1, prefix="/api/v1")

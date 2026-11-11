@@ -18,11 +18,11 @@ from app.models.users import Role, User
 from tests.conftest import bootstrap_admin, csrf_headers
 
 
-def _configure(client: TestClient, slug: str = "integ-r1") -> str:
+def _configure(client: TestClient, slug: str = "integ-r1", adapter: str = "proxmox") -> str:
     response = client.put(
         f"/api/v1/integrations/{slug}",
         headers=csrf_headers(client),
-        json={"integration_id": slug, "name": "Integ R1", "adapter": "proxmox"},
+        json={"integration_id": slug, "name": "Integ R1", "adapter": adapter},
     )
     assert response.status_code == 200, response.text
     return response.json()["id"]
@@ -30,13 +30,17 @@ def _configure(client: TestClient, slug: str = "integ-r1") -> str:
 
 def test_verify_sets_last_verified_at_even_without_adapter(client: TestClient, db) -> None:
     client = bootstrap_admin(client)
-    _configure(client, "integ-verify")
+    # R1-Integration: die Registry wird von create_app() befuellt
+    # (register_all_adapters). Fuer den "keine Adapter"-Pfad wird daher
+    # ein Adapter-Kind verwendet, das in diesem Build bewusst NICHT
+    # implementiert ist (homeassistant; Adapter-Report Agent 4, Pkt. 4).
+    _configure(client, "integ-verify", adapter="homeassistant")
     before = db.scalar(select(Integration.last_verified_at).where(Integration.integration_id == "integ-verify"))
     assert before is None
 
     response = client.post("/api/v1/integrations/integ-verify/verify", headers=csrf_headers(client))
-    # R0/Registry leer => ehrliches not_implemented, aber der Check-Zeitstempel
-    # muss gesetzt sein.
+    # Registry ohne Adapter => ehrliches not_implemented, aber der
+    # Check-Zeitstempel muss gesetzt sein.
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "not_implemented"
 

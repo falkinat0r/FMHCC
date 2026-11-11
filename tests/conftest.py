@@ -87,7 +87,12 @@ def db(session_factory):
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter():
+    # R1-Integration: feature/auth fuegt einen modul-globalen
+    # _bootstrap_limiter (5/60s) hinzu; ohne Reset stoessen die pro-Test-
+    # Bootstraps dieser Suite nach 5 Aufrufen gegen das Limit (429).
+    # Gleiches Muster wie backend/tests/conftest.py (Agent 1).
     auth_routes._login_limiter.reset()
+    auth_routes._bootstrap_limiter.reset()
     yield
 
 

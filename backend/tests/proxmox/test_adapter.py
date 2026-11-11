@@ -200,7 +200,14 @@ def test_verify_endpoint_version_gate(client: TestClient, transport, server) -> 
 
 
 def test_verify_endpoint_unknown_adapter_is_not_implemented(client: TestClient) -> None:
-    """Adapter ohne Registrierung antwortet ehrlich mit not_implemented (kein Stub)."""
+    """Adapter ohne Registrierung antwortet ehrlich mit not_implemented (kein Stub).
+
+    R1-Anpassung: 'tailscale' ist in diesem Build eingebaut (Agent 4) und
+    wuerde einen echten Verify-Attempt liefern (hier: unreachable).
+    'homeassistant' ist das ehrliche 'nicht implementiert'-Kind in R1
+    (Agent-4-Report Pkt. 4) — der Test-Intent (keine Registrierung)
+    bleibt erhalten.
+    """
     client = bootstrap_admin(client)
     response = client.put(
         "/api/v1/integrations/ghost-tail",
@@ -208,7 +215,7 @@ def test_verify_endpoint_unknown_adapter_is_not_implemented(client: TestClient) 
         json={
             "integration_id": "ghost-tail",
             "name": "Ghost",
-            "adapter": "tailscale",
+            "adapter": "homeassistant",
             "base_url": "https://tail.example.lan:1100",
         },
     )

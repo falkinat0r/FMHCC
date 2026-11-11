@@ -62,6 +62,10 @@ class FakeAdapter(BaseAdapter):
 
 @pytest.fixture(autouse=True)
 def _register_fake_adapter():
+    # R1-Integration: create_app() befuellt die Registry inzwischen
+    # (register_all_adapters); die Fixture startet daher — wie
+    # tests/proxmox/conftest.py — immer von einer leeren Registry.
+    registry._reset_for_tests()
     registry.register(FakeAdapter)
     yield
     registry._reset_for_tests()
