@@ -6,7 +6,7 @@
 # Loopback-Stack (nginx 127.0.0.1:8080, API 127.0.0.1:8000, PostgreSQL).
 #
 # Aufruf (als root IM LXC, mit curl + jq):
-#   sudo scripts/qa/e2e-smoke.sh
+#   sudo bash tests/e2e/e2e-smoke.sh
 #
 # Deckung (siehe docs/quality/integration-matrix.md):
 #   1. Health: /api/v1/health/live + /ready (200 bzw. 503-genaech)
@@ -63,11 +63,11 @@ esac
 
 # --- 2. Version ---------------------------------------------------------------
 step "2/8 Version"
-COMMIT="$(curl -fsS -m 10 "$API/version" | jq -r '.git_commit // empty' 2>/dev/null)"
+COMMIT="$(curl -fsS -m 10 "$API/version" | jq -r '.commit // empty' 2>/dev/null)"
 if [ -n "$COMMIT" ]; then
-    ok "git_commit=$COMMIT"
+    ok "commit=$COMMIT"
 else
-    bad "version liefert kein git_commit"
+    bad "version liefert kein commit"
 fi
 
 # --- 3. OpenAPI-Publikation ---------------------------------------------------
@@ -89,7 +89,10 @@ if echo "$LOGIN_RESP" | grep -qi '^set-cookie: hcc_session=.*httponly'; then
 else
     bad "kein HttpOnly-Session-Cookie"
 fi
-CSRF="$(grep -o 'hcc_csrf=[^;]*' "$COOKIE_JAR" | cut -d= -f2 || true)"
+# Cookie-Jar ist im Netscape-Format (tab-getrennt: Domain, TailMatch,
+# Pfad, Secure, Expires, Name, Wert). 'hcc_csrf=' existiert in dieser
+# Datei NICHT als String => awk-Extraktion statt grep.
+CSRF="$(awk -F'\t' '$6=="hcc_csrf"{print $7; exit}' "$COOKIE_JAR")"
 
 # --- 5. RBAC: Viewer darf nicht verwalteten Schreibzugriff ausueben ----------
 step "5/8 RBAC"
@@ -105,7 +108,7 @@ if curl -fsS -m 10 -b "$COOKIE_JAR" -X POST "$API/users" \
     curl -s -D - -o /dev/null -m 10 -c "$VIEWER_JAR" -X POST "$API/auth/login" \
         -H 'Content-Type: application/json' \
         -d "{\"username\":\"$VIEWER_NAME\",\"password\":\"smoke-passw0rt-9x\"}" >/dev/null
-    VCSRF="$(grep -o 'hcc_csrf=[^;]*' "$VIEWER_JAR" | cut -d= -f2 || true)"
+    VCSRF="$(awk -F'\t' '$6=="hcc_csrf"{print $7; exit}' "$VIEWER_JAR")"
     RBAC_CODE="$(curl -s -o /dev/null -w '%{http_code}' -m 10 -b "$VIEWER_JAR" \
         -X POST "$API/users" -H 'Content-Type: application/json' \
         -H "X-CSRF-Token: $VCSRF" \

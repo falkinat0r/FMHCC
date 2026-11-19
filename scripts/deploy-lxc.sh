@@ -123,7 +123,8 @@ for f in .env.example \
          deploy/systemd/hcc-api.service \
          deploy/systemd/health-probe.sh \
          deploy/nginx/hcc.conf \
-         backend/pyproject.toml backend/uv.lock frontend/package.json; do
+         backend/pyproject.toml backend/uv.lock \
+         frontend/package.json frontend/package-lock.json; do
     if [ ! -f "$SRC/$f" ]; then
         echo "ERROR: fehlt im Checkout: $f" >&2
         MISSING=1
@@ -220,7 +221,9 @@ fi
 if [ ! -d "$RELEASE_DIR/frontend/dist" ]; then
     if have node; then
         echo "Node: $(node --version)"
-        (cd "$RELEASE_DIR/frontend" && npm install --no-audit --no-fund && npm run build)
+        # 'npm ci' statt 'npm install': reproduzierbar gegen das
+        # committete package-lock.json (Deployment-Review D-I1, R1-Fix).
+        (cd "$RELEASE_DIR/frontend" && npm ci --no-audit --no-fund && npm run build)
     else
         echo "WARNUNG: Node.js fehlt — Frontend-Build ausgesetzt." >&2
         echo "WARNUNG: nginx liefert bis dahin kein SPA. Node.js >= 20.19" >&2
@@ -243,10 +246,22 @@ log "Stufe 6/7: Konfiguration /etc/hcc/hcc.env (0640, niemals im Repo)"
 ENV_FILE=/etc/hcc/hcc.env
 if [ ! -f "$ENV_FILE" ]; then
     # Basis: .env.example, dann Produktionswerte ueberschreiben.
-    sed -e 's/^HCC_ENVIRONMENT=.*/HCC_ENVIRONMENT=production/' \
+    # WICHTIG (Deployment-Review R1-Validation, V-1/V-2):
+    #  - systemd-EnvironmentFile streicht KEINE Inline-Kommentare;
+    #    '.env.example' hat z. B. 'HCC_SESSION_TTL_SECONDS=43200 # 12 h'
+    #    => der Wert enthaelt den Kommentar => pydantic crasht (int).
+    #    => Inline-Kommentare hier entfernen (Kommentar-Zeilen ignoriert
+    #    systemd selbst).
+    #  - 'HCC_CORS_ORIGINS=' (leer) bricht das pydantic-settings-JSON-Parsing
+    #    fuer das list-Field. '[]' = semantisch identisch (nur same-origin),
+    #    aber valide. Spater noetig? Wert als JSON-Liste eintragen, z. B.
+    #    HCC_CORS_ORIGINS=["https://hcc.tail100.example"].
+    sed -e 's/[[:space:]]*#.*$//' \
+        -e 's/^HCC_ENVIRONMENT=.*/HCC_ENVIRONMENT=production/' \
         -e 's|^HCC_DATABASE_URL=.*|HCC_DATABASE_URL=postgresql+psycopg://hcc:'"${PG_PASS}"'@127.0.0.1:5432/hcc|' \
         -e 's/^HCC_COOKIE_SECURE=.*/HCC_COOKIE_SECURE=true/' \
         -e 's/^HCC_GIT_COMMIT=.*/HCC_GIT_COMMIT='"${COMMIT}"'/' \
+        -e 's/^HCC_CORS_ORIGINS=.*/HCC_CORS_ORIGINS=[]/' \
         "$SRC/.env.example" > "$ENV_FILE"
     # Einmaliger Bootstrap-Token (mind. 16 Zeichen, Zufall, nur hier)
     if grep -q '^HCC_BOOTSTRAP_TOKEN=' "$ENV_FILE"; then
