@@ -364,3 +364,18 @@ Bestätigte Invarianten:
 
 Feature-Branches und `master` sind nicht verändert; alle
 Feature-Worktrees bleiben, wie sie die Agenten hinterlassen haben.
+
+---
+
+## 11. Postscript (2026-11-19, nach Freigabe)
+
+- **Freigabe** durch den Auftraggeber; `integration/r1` → `master`
+  gemergt (**Fast-forward**, `master`-Tip = `342f3bc` = identischer
+  Commit/identischer Tree wie `integration/r1` — daher keine erneute
+  Testlauf-Evidenz nötig, alle §4-Ergebnisse gelten unverändert).
+- **Push nach `https://github.com/falkinat0r/FMHCC.git`** (Remote
+  `origin`): alle 8 Branches — `master` (Default-Branch),
+  `integration/r1`, `foundation`, `feature/auth`, `feature/frontend`,
+  `feature/proxmox`, `feature/qa`, `feature/telemetry`. Kein Force-Push.
+- Restliche Release-Schritte laufen im Ziel-System (nicht in diesem
+  Repository): LXC-Deployment + `tests/e2e/e2e-smoke.sh` (s. §10).
